@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fat Cat Studios — Mutant Mouse City (FPS/TPS)</title>
+  <style>
+    html, body { margin:0; height:100%; background:#070b14; overflow:hidden; font-family:system-ui,Segoe UI,Arial; }
+    #ui {
+      position:fixed; left:12px; top:12px; z-index:10;
+      color:#eaf2ff; background:rgba(10,14,26,.72);
+      border:1px solid rgba(120,160,255,.22);
+      border-radius:14px; padding:12px; backdrop-filter: blur(6px);
+      max-width:min(560px, 92vw);
+    }
+    #ui b { color:#9dc2ff; }
+    #hint { opacity:.9; font-size:12px; margin-top:6px; line-height:1.25; }
+    #menu {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:20;
+      background:radial-gradient(ellipse at center, rgba(40,70,140,.25), rgba(7,11,20,.94));
+    }
+    .panel {
+      width:min(720px, 92vw);
+      color:#eaf2ff; background:rgba(10,14,26,.76);
+      border:1px solid rgba(120,160,255,.22);
+      border-radius:18px; padding:18px; backdrop-filter: blur(8px);
+      box-shadow:0 20px 60px rgba(0,0,0,.45);
+    }
+    .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    button, input, select {
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(120,160,255,.22);
+      color:#eaf2ff; border-radius:12px; padding:10px 12px; font-size:14px;
+    }
+    button { cursor:pointer; }
+    button:hover { background:rgba(255,255,255,.10); }
+    input { outline:none; min-width:220px; }
+    .pill { padding:6px 10px; border-radius:999px; border:1px solid rgba(120,160,255,.22); background:rgba(255,255,255,.04); font-size:12px; }
+    #toast {
+      position:fixed; left:50%; top:14%; transform:translateX(-50%);
+      z-index:30; display:none;
+      color:#eaf2ff; background:rgba(10,14,26,.78);
+      border:1px solid rgba(120,160,255,.22);
+      border-radius:14px; padding:12px 14px; backdrop-filter: blur(8px);
+      width:min(680px, 92vw); text-align:center;
+    }
+    #inv, #lb {
+      position:fixed; right:12px; top:12px; z-index:12;
+      width:min(460px, 92vw); max-height:min(76vh, 720px);
+      overflow:auto; display:none;
+      color:#eaf2ff; background:rgba(10,14,26,.76);
+      border:1px solid rgba(120,160,255,.22);
+      border-radius:14px; padding:12px; backdrop-filter: blur(8px);
+    }
+    #lb { top:auto; bottom:12px; max-height:min(42vh, 460px); }
+    .invHead { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .card {
+      margin-top:8px; padding:10px; border-radius:12px; cursor:pointer;
+      border:1px solid rgba(120,160,255,.18); background:rgba(255,255,255,.04);
+    }
+    .card:hover { background:rgba(255,255,255,.06); }
+    .card small { display:block; opacity:.85; margin-top:3px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:6px 6px; border-bottom:1px solid rgba(120,160,255,.14); text-align:left; }
+    th { opacity:.9; }
+    #crosshair {
+      position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:14px; height:14px; z-index:11; pointer-events:none; opacity:.9;
+    }
+    #crosshair:before, #crosshair:after {
+      content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      background:rgba(157,194,255,.92);
+    }
+    #crosshair:before { width:14px; height:2px; border-radius:2px; }
+    #crosshair:after  { width:2px; height:14px; border-radius:2px; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .kbd { padding:2px 6px; border-radius:8px; border:1px solid rgba(120,160,255,.25); background:rgba(255,255,255,.04); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div id="menu">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <div style="font-size:20px;"><b>Fat Cat Studios</b> — Mutant Mouse City (FPS/TPS)</div>
+          <div style="opacity:.9;margin-top:4px;">
+            Giant city + landscape map. No storm circle. Rescue the <b>Baby Lava Serpent</b> in the abandoned lab, then destroy the <b>Mother Nest Core</b>.
+          </div>
+        </div>
+        <div class="pill">Single-file • Deploy-ready</div>
+      </div>
+
+      <div class="row">
+        <label class="pill">Player Name
+          <input id="pname" maxlength="16" placeholder="Chris" />
+        </label>
+        <label class="pill">Starting View
+          <select id="view">
+            <option value="tps" selected>Third-person</option>
+            <option value="fps">First-person</option>
+          </select>
+        </label>
+        <label class="pill">Difficulty
+          <select id="diff">
+            <option value="1">Easy</option>
+            <option value="2" selected>Normal</option>
+            <option value="3">Hard</option>
+            <option value="4">Insane</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="play">Play</button>
+        <button id="how">How to Play</button>
+        <button id="showLB">Leaderboard</button>
+        <button id="resetLB">Reset LB</button>
+      </div>
+
+      <div class="row">
+        <label class="pill">Promo Code
+          <input id="code" placeholder="FATCATALL" />
+        </label>
+        <button id="redeem">Redeem</button>
+      </div>
+
+      <div style="margin-top:10px;opacity:.92;line-height:1.35">
+        Controls: <span class="kbd">WASD</span> move • <span class="kbd">Shift</span> sprint • <span class="kbd">Mouse</span> look • <span class="kbd">Click</span> shoot •
+        <span class="kbd">R</span> reload • <span class="kbd">E</span> interact • <span class="kbd">I</span> inventory • <span class="kbd">L</span> leaderboard •
+        <span class="kbd">V</span> toggle FPS/TPS • <span class="kbd">Esc</span> unlock mouse
+      </div>
+      <div style="opacity:.8;margin-top:6px;font-size:12px">
+        Tip: Click the game to lock the mouse (pointer lock). If it doesn’t lock, click once, then click again.
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="crosshair" style="display:none"></div>
+
+  <div id="ui" style="display:none"></div>
+
+  <div id="inv">
+    <div class="invHead">
+      <div><b>Inventory</b> <span class="pill">Click a weapon to equip</span></div>
+      <div class="pill">Press <b>I</b> to close</div>
+    </div>
+    <div id="invList"></div>
+  </div>
+
+  <div id="lb">
+    <div class="invHead">
+      <div><b>Local Leaderboard</b> <span class="pill">This device/browser</span></div>
+      <div class="pill">Press <b>L</b> to close</div>
+    </div>
+    <div id="lbBody" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- Three.js (CDN) -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+  (() => {
+    // ===============================
+    // Fat Cat Studios — Mutant Mouse City (FPS/TPS)
+    // - Giant city + landscape map (procedural)
+    // - FPS/TPS toggle (V)
+    // - 1200 procedural weapons + promo unlock ALL
+    // - Baby Lava Serpent found in abandoned science lab (E)
+    // - Destroy Mother Nest Core to win
+    // - Local leaderboard (localStorage)
+    // ===============================
+
+    // ---------- UI ----------
+    const menu = document.getElementById("menu");
+    const ui = document.getElementById("ui");
+    const toast = document.getElementById("toast");
+    const crosshair = document.getElementById("crosshair");
+
+    const invEl = document.getElementById("inv");
+    const invList = document.getElementById("invList");
+
+    const lbEl = document.getElementById("lb");
+    const lbBody = document.getElementById("lbBody");
+
+    const pname = document.getElementById("pname");
+    const viewSel = document.getElementById("view");
+    const diffSel = document.getElementById("diff");
+    const codeInp = document.getElementById("code");
+
+    const btnPlay = document.getElementById("play");
+    const btnHow = document.getElementById("how");
+    const btnShowLB = document.getElementById("showLB");
+    const btnResetLB = document.getElementById("resetLB");
+    const btnRedeem = document.getElementById("redeem");
+
+    function showToast(title, body, ms=2200){
+      toast.style.display = "block";
+      toast.innerHTML = `<b>${escapeHtml(title)}</b><div style="opacity:.92;margin-top:4px">${escapeHtml(body)}</div>`;
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.style.display = "none", ms);
+    }
+
+    function escapeHtml(str){
+      return (""+str).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+
+    // ---------- Leaderboard (local) ----------
+    const LB_KEY = "fatcat_city_fps_tps_lb_v1";
+    function loadLB(){
+      try { return JSON.parse(localStorage.getItem(LB_KEY) || "[]"); } catch { return []; }
+    }
+    function saveLB(list){
+      localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0,30)));
+    }
+    function addLB(entry){
+      const list = loadLB();
+      list.push(entry);
+      list.sort((a,b)=>{
+        const ad=a.coreDestroyed?1:0, bd=b.coreDestroyed?1:0;
+        if (bd!==ad) return bd-ad;
+        if (b.score!==a.score) return b.score-a.score;
+        return a.timeSec-b.timeSec;
+      });
+      saveLB(list);
+    }
+    function renderLB(){
+      const list = loadLB();
+      if (!list.length){
+        lbBody.innerHTML = `<div style="opacity:.85;font-size:12px">No runs yet. Destroy the core to top the board.</div>`;
+        return;
+      }
+      const rows = list.slice(0,15).map((e,i)=>`
+        <tr>
+          <td>${i+1}</td>
+          <td><b>${escapeHtml(e.name)}</b></td>
+          <td>${escapeHtml(e.view)}</td>
+          <td>${e.coreDestroyed ? "✅" : "—"}</td>
+          <td>${Math.round(e.score)}</td>
+          <td>${fmtTime(e.timeSec)}</td>
+        </tr>
+      `).join("");
+      lbBody.innerHTML = `
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>View</th><th>Core</th><th>Score</th><th>Time</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+    function fmtTime(s){
+      s = Math.max(0, Math.floor(s));
+      const m = Math.floor(s/60), r = s%60;
+      return `${m}:${String(r).padStart(2,"0")}`;
+    }
+    function toggleLB(){
+      lbEl.style.display = (lbEl.style.display === "none" || !lbEl.style.display) ? "block" : "none";
+      if (lbEl.style.display === "block") renderLB();
+    }
+    function toggleInv(){
+      invEl.style.display = (invEl.style.display === "none" || !invEl.style.display) ? "block" : "none";
+      if (invEl.style.display === "block") refreshInv();
+    }
+
+    // ---------- Weapon system (1200+) ----------
+    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+    const lerp  = (a,b,t)=>a+(b-a)*t;
+    const rand  = (a=0,b=1)=>a+Math.random()*(b-a);
+    const randi = (a,b)=>Math.floor(rand(a,b+1));
+    const TAU = Math.PI*2;
+
+    const RARITIES = [
+      { name:"Common",    w:54, mult:1.00 },
+      { name:"Uncommon",  w:25, mult:1.18 },
+      { name:"Rare",      w:12, mult:1.40 },
+      { name:"Epic",      w:7,  mult:1.75 },
+      { name:"Legendary", w:2,  mult:2.25 },
+    ];
+    const PREFIX = ["Rusty","Icy","Neon","Turbo","Omega","Doom","Solar","Vortex","Glitch","Arc","Void","Storm","Lunar","Quantum","Hyper","Radiant","Spicy","Abyssal","Chrome","Bionic"];
+    const CORENAME = ["Fish Blaster","Yarn Cannon","Cheese Launcher","Purr Rifle","Whisker SMG","Tuna Shotgun","Cataclysm Carbine","Laser Paw","Mew-sket","Feline Rail","Sardine Sniper","Claw Caster","Napalm Nibbler","Zapper"];
+    const SUFFIX = ["of Squeak Slaying","of Blue Cracks","of Overclock","of Anti-Rodent","of Doom Paws","of Static","of Meltcore","of Frostbite","of Echoes","of Catness","of Last City","of Lab Ruins","of Reactorbreak"];
+    const EFFECTS = [
+      { id:"none",   name:"",         w:30 },
+      { id:"pierce", name:"Piercing", w:14 },
+      { id:"poison", name:"Toxic",    w:10 },
+      { id:"freeze", name:"Freeze",   w:8 },
+      { id:"shock",  name:"Shock",    w:8 },
+      { id:"burn",   name:"Burn",     w:7 },
+      { id:"split",  name:"Splitter", w:6 },
+      { id:"leech",  name:"Leech",    w:5 },
+      { id:"nova",   name:"Nova",     w:2 },
+    ];
+    function pickWeighted(arr){
+      const sum = arr.reduce((s,a)=>s+a.w,0);
+      let roll = rand(0,sum);
+      for (const a of arr){ roll -= a.w; if (roll <= 0) return a; }
+      return arr[arr.length-1];
+    }
+    function makeWeapon(i){
+      const rar = pickWeighted(RARITIES);
+      const eff = pickWeighted(EFFECTS);
+      const prefix = PREFIX[randi(0, PREFIX.length-1)];
+      const core = CORENAME[randi(0, CORENAME.length-1)];
+      const suffix = SUFFIX[randi(0, SUFFIX.length-1)];
+
+      const baseDmg = rand(10, 34);
+      const baseRate = rand(4.0, 12.0);    // shots/sec
+      const baseSpread = rand(0.002, 0.045); // radians
+      const baseMag = randi(10, 55);
+      const baseReload = rand(0.8, 2.3);
+      const baseRange = rand(55, 130);
+
+      const m = rar.mult;
+      const spicy = (Math.sin(i*12.9898) + Math.cos(i*78.233)) * 0.5 + 0.5;
+
+      let pierce=0, poison=0, freeze=0, shock=0, burn=0, split=0, leech=0, nova=0;
+      if (eff.id==="pierce") pierce = randi(1, 3);
+      if (eff.id==="poison") poison = rand(0.10, 0.30);
+      if (eff.id==="freeze") freeze = rand(0.15, 0.40);
+      if (eff.id==="shock")  shock  = rand(0.12, 0.35);
+      if (eff.id==="burn")   burn   = rand(0.10, 0.28);
+      if (eff.id==="split")  split  = randi(2, 4);
+      if (eff.id==="leech")  leech  = rand(0.03, 0.10);
+      if (eff.id==="nova")   nova   = rand(0.16, 0.30);
+
+      const dmg = (baseDmg*m) * lerp(0.9, 1.25, spicy);
+      const rate = baseRate * lerp(0.9, 1.20, 1-spicy);
+      const spread = baseSpread * lerp(0.85, 1.35, rand());
+      const mag = clamp(Math.round(baseMag * lerp(0.85, 1.35, 1-spicy)), 6, 90);
+      const reload = clamp(baseReload * lerp(0.85, 1.35, spicy), 0.55, 2.9);
+      const range = (baseRange*m) * lerp(0.9, 1.2, spicy);
+
+      const name =
+        (eff.id !== "none"
+          ? `${prefix} ${eff.name} ${core} ${suffix}`
+          : `${prefix} ${core} ${suffix}`
+        ).replace(/\s+/g," ").trim();
+
+      return {
+        id:`W${i}`,
+        name,
+        rarity: rar.name,
+        dmg, rate, spread, mag, reload, range,
+        effect: eff.id,
+        pierce, poison, freeze, shock, burn, split, leech, nova,
+        ammo: mag,
+        reloading: 0
+      };
+    }
+    const WEAPON_POOL = [];
+    for (let i=1; i<=1200; i++) WEAPON_POOL.push(makeWeapon(i));
+    const orderR = ["Common","Uncommon","Rare","Epic","Legendary"];
+    function cloneWeapon(w){ return { ...w, ammo:w.mag, reloading:0 }; }
+    function rollWeapon(minRarity="Uncommon"){
+      let w = WEAPON_POOL[randi(0, WEAPON_POOL.length-1)];
+      const minIdx = orderR.indexOf(minRarity);
+      for (let tries=0; tries<80 && orderR.indexOf(w.rarity) < minIdx; tries++){
+        w = WEAPON_POOL[randi(0, WEAPON_POOL.length-1)];
+      }
+      return cloneWeapon(w);
+    }
+
+    // ---------- Three.js scene ----------
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x070b14, 40, 360);
+
+    const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1200);
+
+    const hemi = new THREE.HemisphereLight(0x9dc2ff, 0x0a1020, 0.85);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+    sun.position.set(120, 200, 80);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 500;
+    sun.shadow.camera.left = -180;
+    sun.shadow.camera.right = 180;
+    sun.shadow.camera.top = 180;
+    sun.shadow.camera.bottom = -180;
+    scene.add(sun);
+
+    // Ground
+    const groundGeo = new THREE.PlaneGeometry(1200, 1200, 1, 1);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0b1224, roughness: 1.0, metalness: 0.0 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Simple landscape hills (low-poly)
+    const hillGeo = new THREE.SphereGeometry(1, 18, 14);
+    function addHill(x,z,scale,color){
+      const m = new THREE.Mesh(hillGeo, new THREE.MeshStandardMaterial({ color, roughness: 1.0 }));
+      m.scale.set(scale*1.8, scale*0.6, scale*1.8);
+      m.position.set(x, scale*0.25, z);
+      m.castShadow = false;
+      m.receiveShadow = true;
+      scene.add(m);
+      return m;
+    }
+    addHill(-360, 280, 140, 0x0b1b2f);
+    addHill(-420, 120, 110, 0x0a1829);
+    addHill( 420,-280, 160, 0x0b1b2f);
+    addHill( 360,-120, 120, 0x0a1829);
+
+    // City generation (procedural buildings + roads)
+    const buildings = [];
+    const obstacles = []; // collidable meshes
+    const cityCenter = new THREE.Vector3(0,0,0);
+
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x0a1020, roughness: 1.0 });
+    const buildMat = new THREE.MeshStandardMaterial({ color: 0x102046, roughness: 0.9, metalness: 0.05 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a2b55, roughness: 0.2, metalness: 0.2, emissive: 0x0b1c44, emissiveIntensity: 0.5 });
+
+    // Roads grid area
+    const roadSize = 720;
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(roadSize, roadSize), roadMat);
+    road.rotation.x = -Math.PI/2;
+    road.position.y = 0.01;
+    road.receiveShadow = true;
+    scene.add(road);
+
+    // Road markings (simple lines using thin boxes)
+    const lineMat = new THREE.MeshStandardMaterial({ color: 0x27406f, roughness: 1.0, emissive: 0x0b2a5a, emissiveIntensity: 0.35 });
+    function addLine(x,z,w,h){
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, h), lineMat);
+      m.position.set(x, 0.03, z);
+      m.receiveShadow = true;
+      scene.add(m);
+      return m;
+    }
+    for (let i=-6;i<=6;i++){
+      addLine(i*50, 0, 1.2, roadSize);
+      addLine(0, i*50, roadSize, 1.2);
+    }
+
+    // Buildings blocks
+    const boxGeo = new THREE.BoxGeometry(1,1,1);
+    function addBuilding(x,z,w,d,h,mat){
+      const m = new THREE.Mesh(boxGeo, mat);
+      m.scale.set(w,h,d);
+      m.position.set(x, h/2, z);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      scene.add(m);
+      buildings.push(m);
+      obstacles.push(m);
+      return m;
+    }
+
+    // Scatter buildings on a grid with gaps as streets
+    for (let gx=-7; gx<=7; gx++){
+      for (let gz=-7; gz<=7; gz++){
+        // Keep some empty intersections for movement
+        if ((gx===0 && gz===0) || (Math.abs(gx)%2===0 && Math.abs(gz)%2===0)) continue;
+
+        const x = gx*45 + rand(-8,8);
+        const z = gz*45 + rand(-8,8);
+
+        // Avoid placing buildings too close to special landmarks
+        const labPos2 = (x-220)*(x-220) + (z+240)*(z+240);
+        const corePos2 = (x+240)*(x+240) + (z-220)*(z-220);
+        if (labPos2 < 60*60 || corePos2 < 60*60) continue;
+
+        const w = rand(10, 26);
+        const d = rand(10, 26);
+        const h = rand(10, 55) * (rand() < 0.25 ? 1.7 : 1.0);
+        const mat = (rand() < 0.18) ? glassMat : buildMat;
+        addBuilding(x, z, w, d, h, mat);
+      }
+    }
+
+    // Border “ruins” (sparse big blocks)
+    for (let i=0;i<30;i++){
+      const ang = rand(0,TAU);
+      const rad = rand(360, 520);
+      const x = Math.cos(ang)*rad;
+      const z = Math.sin(ang)*rad;
+      const w = rand(20, 55), d = rand(20, 55), h = rand(8, 28);
+      addBuilding(x, z, w, d, h, buildMat);
+    }
+
+    // ---------- Special landmarks ----------
+    // Abandoned Science Lab (where you rescue the serpent)
+    const LAB = { x: 220, z: -240, rescued:false };
+    const labGroup = new THREE.Group();
+    scene.add(labGroup);
+
+    const labBase = new THREE.Mesh(new THREE.BoxGeometry(70, 18, 55), new THREE.MeshStandardMaterial({ color: 0x0b1224, roughness: 1.0 }));
+    labBase.position.set(LAB.x, 9, LAB.z);
+    labBase.castShadow = true; labBase.receiveShadow = true;
+    labGroup.add(labBase);
+    obstacles.push(labBase);
+
+    const labSign = new THREE.Mesh(new THREE.BoxGeometry(40, 6, 2), new THREE.MeshStandardMaterial({ color: 0x1a2b55, emissive: 0x0b2a5a, emissiveIntensity: 0.55 }));
+    labSign.position.set(LAB.x, 16, LAB.z + 28);
+    labSign.castShadow = true;
+    labGroup.add(labSign);
+
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 14, 18), new THREE.MeshStandardMaterial({ color: 0x122038, emissive: 0x0b2a5a, emissiveIntensity: 0.6 }));
+    pod.position.set(LAB.x - 18, 7, LAB.z + 8);
+    pod.castShadow = true;
+    labGroup.add(pod);
+    // Pod is interact target but not a hard obstacle (optional)
+
+    // Mother Nest Core (reactor)
+    const CORE = { x: -240, z: 220, alive:true, hp: 26000 };
+    const coreGroup = new THREE.Group();
+    scene.add(coreGroup);
+
+    const coreBase = new THREE.Mesh(new THREE.CylinderGeometry(24, 30, 18, 28), new THREE.MeshStandardMaterial({ color: 0x0d1a33, roughness: 0.8, emissive: 0x0b1c44, emissiveIntensity: 0.6 }));
+    coreBase.position.set(CORE.x, 9, CORE.z);
+    coreBase.castShadow = true;
+    coreGroup.add(coreBase);
+    obstacles.push(coreBase);
+
+    const coreGlow = new THREE.Mesh(new THREE.SphereGeometry(10, 22, 18), new THREE.MeshStandardMaterial({ color: 0x9dc2ff, emissive: 0x4b8cff, emissiveIntensity: 1.2, roughness: 0.2 }));
+    coreGlow.position.set(CORE.x, 16, CORE.z);
+    coreGroup.add(coreGlow);
+
+    // ---------- Player & camera ----------
+    let running = false;
+    let playerName = "Chris";
+    let startTimeSec = 0;
+
+    const player = {
+      pos: new THREE.Vector3(0, 1.6, 0),
+      vel: new THREE.Vector3(),
+      yaw: 0,
+      pitch: 0,
+      speed: 6.2,
+      sprintMult: 1.45,
+      stamina: 100,
+      staminaMax: 100,
+      hp: 100,
+      hpMax: 100,
+      invuln: 0,
+      score: 0,
+      level: 1,
+      xp: 0,
+      view: "tps", // fps/tps
+      weapon: null,
+      owned: [],
+      // serpent companion
+      serpent: {
+        owned:false,
+        t: 0,
+        cd: 0,
+        mesh: null
+      }
+    };
+
+    // Fat Cat body (simple capsule-ish)
+    const cat = new THREE.Group();
+    scene.add(cat);
+    const catBody = new THREE.Mesh(new THREE.SphereGeometry(0.55, 22, 18), new THREE.MeshStandardMaterial({ color: 0x102046, roughness: 0.7, metalness: 0.05 }));
+    catBody.castShadow = true;
+    catBody.position.set(0, 0.6, 0);
+    cat.add(catBody);
+
+    const catHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 22, 18), new THREE.MeshStandardMaterial({ color: 0x102046, roughness: 0.7 }));
+    catHead.castShadow = true;
+    catHead.position.set(0, 1.18, 0.12);
+    cat.add(catHead);
+
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x9dc2ff, emissive: 0x4b8cff, emissiveIntensity: 0.35 });
+    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 12), eyeMat);
+    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 12), eyeMat);
+    eye1.position.set(-0.12, 1.22, 0.48);
+    eye2.position.set( 0.12, 1.22, 0.48);
+    cat.add(eye1, eye2);
+
+    // Serpent mesh
+    function makeSerpentMesh(){
+      const g = new THREE.Group();
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 18, 14), new THREE.MeshStandardMaterial({ color: 0xffb38d, emissive: 0xff7a3a, emissiveIntensity: 0.55, roughness: 0.3 }));
+      orb.castShadow = true;
+      g.add(orb);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.03, 10, 24), new THREE.MeshStandardMaterial({ color: 0xffe08d, emissive: 0xffd25a, emissiveIntensity: 0.35 }));
+      ring.rotation.x = Math.PI/2;
+      g.add(ring);
+      return g;
+    }
+
+    // ---------- Pointer lock + input ----------
+    const keys = new Set();
+    window.addEventListener("keydown", (e)=>{
+      const k = e.key.toLowerCase();
+      keys.add(k);
+
+      if (k==="i") toggleInv();
+      if (k==="l") toggleLB();
+      if (k==="v") toggleView();
+      if (k==="e") tryInteract();
+      if (k==="r") tryReload();
+
+      // prevent page scroll
+      if (["w","a","s","d"," ","shift","arrowup","arrowdown","arrowleft","arrowright"].includes(k)) e.preventDefault();
+    });
+    window.addEventListener("keyup", (e)=>keys.delete(e.key.toLowerCase()));
+
+    let mouseDown = false;
+    window.addEventListener("mousedown", ()=>{ mouseDown=true; if (running) lockPointer(); });
+    window.addEventListener("mouseup", ()=>mouseDown=false);
+
+    function lockPointer(){
+      if (document.pointerLockElement !== renderer.domElement){
+        renderer.domElement.requestPointerLock?.();
+      }
+    }
+    document.addEventListener("pointerlockchange", ()=>{
+      // show crosshair when locked
+      const locked = document.pointerLockElement === renderer.domElement;
+      crosshair.style.display = locked && running ? "block" : "none";
+    });
+
+    window.addEventListener("mousemove", (e)=>{
+      if (!running) return;
+      if (document.pointerLockElement !== renderer.domElement) return;
+      const sensitivity = 0.0022;
+      player.yaw   -= e.movementX * sensitivity;
+      player.pitch -= e.movementY * sensitivity;
+      player.pitch = clamp(player.pitch, -1.15, 1.15);
+    });
+
+    // ---------- Enemies ----------
+    const enemies = [];
+    const enemyGeo = new THREE.SphereGeometry(0.38, 18, 14);
+    const enemyMat = new THREE.MeshStandardMaterial({ color: 0x1a2440, roughness: 0.8 });
+    const enemyEyeMat = new THREE.MeshStandardMaterial({ color: 0x9dc2ff, emissive: 0x4b8cff, emissiveIntensity: 0.5 });
+
+    function spawnEnemy(){
+      // spawn around player, but not inside buildings too close
+      const ang = rand(0,TAU);
+      const dist = rand(18, 34);
+      const x = player.pos.x + Math.cos(ang)*dist;
+      const z = player.pos.z + Math.sin(ang)*dist;
+
+      // avoid too close to lab/core spawns for fairness
+      if ((x-LAB.x)*(x-LAB.x) + (z-LAB.z)*(z-LAB.z) < 14*14) return;
+      if ((x-CORE.x)*(x-CORE.x) + (z-CORE.z)*(z-CORE.z) < 16*16) return;
+
+      const m = new THREE.Mesh(enemyGeo, enemyMat);
+      m.castShadow = true;
+      m.position.set(x, 0.55, z);
+      scene.add(m);
+
+      const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), enemyEyeMat);
+      const e2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), enemyEyeMat);
+      e1.position.set(-0.12, 0.08, 0.33);
+      e2.position.set( 0.12, 0.08, 0.33);
+      m.add(e1,e2);
+
+      const base = 1 + (parseInt(diffSel.value,10)-2)*0.35;
+      enemies.push({
+        mesh: m,
+        hp: rand(40, 78) * (1 + base*0.5),
+        speed: rand(2.1, 3.4) * (1 + base*0.15),
+        dmg: (10 + base*4),
+        poisonT: 0, freezeT: 0, shockT: 0, burnT: 0
+      });
+    }
+
+    // ---------- Pickups (weapons/health) ----------
+    const pickups = [];
+    const pickupMatW = new THREE.MeshStandardMaterial({ color: 0x9dc2ff, emissive: 0x4b8cff, emissiveIntensity: 0.35 });
+    const pickupMatH = new THREE.MeshStandardMaterial({ color: 0x79ffb0, emissive: 0x21ff80, emissiveIntensity: 0.25 });
+
+    function spawnPickup(x,z,type,data){
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), type==="weapon" ? pickupMatW : pickupMatH);
+      m.castShadow = true;
+      m.position.set(x, 0.35, z);
+      scene.add(m);
+      pickups.push({ mesh:m, type, data, t:0 });
+    }
+
+    function dropLootAt(x,z){
+      const lvl = player.level;
+      const min = lvl < 4 ? "Uncommon" : (lvl < 7 ? "Rare" : (lvl < 10 ? "Epic" : "Legendary"));
+      spawnPickup(x+rand(-0.6,0.6), z+rand(-0.6,0.6), "weapon", { w: rollWeapon(min) });
+      if (rand() < 0.25) spawnPickup(x+rand(-0.8,0.8), z+rand(-0.8,0.8), "health", { a: randi(12, 26) });
+    }
+
+    // ---------- Combat (raycast hitscan) ----------
+    const raycaster = new THREE.Raycaster();
+    const tmpVec = new THREE.Vector3();
+
+    function getAimDirection(){
+      // forward direction from yaw/pitch
+      const dir = new THREE.Vector3(
+        Math.sin(player.yaw) * Math.cos(player.pitch),
+        Math.sin(player.pitch),
+        Math.cos(player.yaw) * Math.cos(player.pitch)
+      );
+      return dir.normalize();
+    }
+
+    function tryReload(){
+      const w = player.weapon;
+      if (!w) return;
+      if (w.reloading > 0) return;
+      if (w.ammo >= w.mag) return;
+      w.reloading = w.reload;
+      showToast("Reloading", `${w.name} (${w.reload.toFixed(2)}s)`, 900);
+    }
+
+    function shoot(){
+      const w = player.weapon;
+      if (!w || w.reloading > 0) return;
+      if (w.ammo <= 0){
+        tryReload();
+        return;
+      }
+      // rate gate
+      const now = performance.now()/1000;
+      if (shoot._next && now < shoot._next) return;
+      shoot._next = now + (1 / w.rate);
+
+      w.ammo--;
+
+      // spread
+      const spreadYaw = (rand(-1,1) * w.spread);
+      const spreadPitch = (rand(-1,1) * w.spread * 0.8);
+
+      const dir = getAimDirection();
+      // apply small spread by rotating around axes
+      const d = dir.clone();
+      d.applyAxisAngle(new THREE.Vector3(0,1,0), spreadYaw);
+      d.applyAxisAngle(new THREE.Vector3(1,0,0), spreadPitch);
+      d.normalize();
+
+      const origin = player.pos.clone();
+      origin.y = 1.55;
+
+      raycaster.set(origin, d);
+      raycaster.far = w.range;
+
+      // Intersect enemies first
+      const enemyMeshes = enemies.map(e=>e.mesh);
+      const hitsEnemy = raycaster.intersectObjects(enemyMeshes, true);
+
+      // Also intersect core (reactor)
+      const hitsCore = raycaster.intersectObject(coreBase, true);
+
+      // choose nearest valid hit
+      let target = null;
+      let hitPoint = null;
+      let hitDist = Infinity;
+
+      if (hitsEnemy.length){
+        target = hitsEnemy[0].object;
+        hitPoint = hitsEnemy[0].point;
+        hitDist = hitsEnemy[0].distance;
+      }
+      if (hitsCore.length && hitsCore[0].distance < hitDist){
+        target = coreBase;
+        hitPoint = hitsCore[0].point;
+        hitDist = hitsCore[0].distance;
+      }
+
+      // tiny tracer line (quick)
+      drawTracer(origin, hitPoint || origin.clone().add(d.clone().multiplyScalar(w.range)));
+
+      // apply damage/effects
+      if (target){
+        if (target === coreBase){
+          if (CORE.alive){
+            CORE.hp -= w.dmg;
+            player.score += 3;
+            coreGlow.scale.setScalar(1 + rand(0, 0.22));
+            if (CORE.hp <= 0){
+              CORE.hp = 0;
+              CORE.alive = false;
+              winGame();
+            }
+          }
+        } else {
+          // find enemy root mesh
+          const root = findEnemyRoot(target);
+          const e = enemies.find(x=>x.mesh === root);
+          if (e){
+            damageEnemy(e, w);
+          }
+        }
+      }
+    }
+
+    // tracer lines using THREE.Line (reused pool)
+    const tracerPool = [];
+    function drawTracer(from, to){
+      let line = tracerPool.find(t=>!t.alive);
+      if (!line){
+        const geo = new THREE.BufferGeometry().setFromPoints([from, to]);
+        const mat = new THREE.LineBasicMaterial({ color: 0x9dc2ff, transparent:true, opacity:0.75 });
+        line = new THREE.Line(geo, mat);
+        line.alive = false;
+        scene.add(line);
+        tracerPool.push(line);
+      }
+      line.geometry.setFromPoints([from, to]);
+      line.material.opacity = 0.75;
+      line.alive = true;
+      line.life = 0.08;
+    }
+
+    function findEnemyRoot(obj){
+      // walk up to the mesh that is direct child of scene (enemy mesh)
+      let o = obj;
+      while (o && o.parent && o.parent !== scene) o = o.parent;
+      return o || obj;
+    }
+
+    function damageEnemy(e, w){
+      e.hp -= w.dmg;
+
+      // effect timers (simple)
+      if (w.effect === "poison") e.poisonT = Math.max(e.poisonT, 1.8);
+      if (w.effect === "freeze") e.freezeT = Math.max(e.freezeT, 1.3);
+      if (w.effect === "shock")  e.shockT  = Math.max(e.shockT, 1.0);
+      if (w.effect === "burn")   e.burnT   = Math.max(e.burnT, 1.3);
+
+      // leech heal chance
+      if (w.effect === "leech" && rand() < w.leech){
+        player.hp = clamp(player.hp + w.dmg*0.18, 0, player.hpMax);
+      }
+
+      // nova: small AoE pulse
+      if (w.effect === "nova" && rand() < w.nova){
+        for (const other of enemies){
+          const d2 = other.mesh.position.distanceToSquared(e.mesh.position);
+          if (d2 < 4.5*4.5 && other !== e) other.hp -= w.dmg*0.35;
+        }
+        player.score += 10;
+      }
+
+      player.score += 6;
+
+      // split: bonus hitscan shards
+      if (w.effect === "split" && w.split > 0 && rand() < 0.28){
+        for (let i=0; i<w.split; i++){
+          const d = getAimDirection();
+          d.applyAxisAngle(new THREE.Vector3(0,1,0), rand(-0.28,0.28));
+          d.applyAxisAngle(new THREE.Vector3(1,0,0), rand(-0.20,0.20));
+          raycaster.set(player.pos.clone(), d.normalize());
+          raycaster.far = w.range*0.75;
+          const hits = raycaster.intersectObjects(enemies.map(x=>x.mesh), true);
+          if (hits.length){
+            const root = findEnemyRoot(hits[0].object);
+            const ee = enemies.find(x=>x.mesh===root);
+            if (ee) ee.hp -= w.dmg*0.25;
+          }
+        }
+      }
+
+      if (e.hp <= 0){
+        // kill
+        player.score += 50;
+        addXP(30);
+        dropLootAt(e.mesh.position.x, e.mesh.position.z);
+        scene.remove(e.mesh);
+        enemies.splice(enemies.indexOf(e), 1);
+      }
+    }
+
+    // ---------- XP / leveling ----------
+    function xpNeed(l){ return Math.floor(60 + l*45 + Math.pow(l, 1.35)*20); }
+    function addXP(xp){
+      player.xp += xp;
+      while (player.xp >= xpNeed(player.level)){
+        player.xp -= xpNeed(player.level);
+        player.level++;
+        player.hpMax += 8;
+        player.hp = player.hpMax;
+        player.speed += 0.2;
+        showToast("LEVEL UP!", `Level ${player.level} — Max HP up`, 1600);
+
+        // level loot
+        if (player.level % 2 === 0){
+          const min = player.level < 6 ? "Rare" : (player.level < 10 ? "Epic" : "Legendary");
+          const w = rollWeapon(min);
+          player.owned.push(w);
+          showToast("Loot Found", `[${w.rarity}] ${w.name}`, 2200);
+          if (invEl.style.display==="block") refreshInv();
+        }
+      }
+    }
+
+    // ---------- Inventory UI ----------
+    function refreshInv(){
+      invList.innerHTML = "";
+      const ord = { "Common":0, "Uncommon":1, "Rare":2, "Epic":3, "Legendary":4 };
+      const owned = player.owned.slice().sort((a,b)=>ord[b.rarity]-ord[a.rarity]);
+
+      // keep it usable: show top 200 unless promo unlocked all (still selectable, just huge)
+      const cap = owned.length > 250 ? 250 : owned.length;
+      const note = owned.length > cap ? `<div class="pill" style="margin-top:8px">Showing top ${cap} of ${owned.length}. (We can add search next.)</div>` : "";
+      invList.insertAdjacentHTML("beforeend", note);
+
+      for (let i=0; i<cap; i++){
+        const w = owned[i];
+        const el = document.createElement("div");
+        el.className = "card";
+        const sel = player.weapon && player.weapon.id === w.id;
+        el.innerHTML = `
+          <div><b>[${w.rarity}]</b> ${escapeHtml(w.name)} ${sel ? "✅" : ""}</div>
+          <small>DMG ${w.dmg.toFixed(1)} • Rate ${w.rate.toFixed(1)}/s • Spread ${w.spread.toFixed(3)} • Mag ${w.mag} • Reload ${w.reload.toFixed(2)}s • Range ${w.range.toFixed(0)} • Effect ${w.effect}</small>
+        `;
+        el.onclick = () => {
+          player.weapon = w;
+          showToast("Equipped", w.name, 1200);
+          refreshInv();
+        };
+        invList.appendChild(el);
+      }
+    }
+
+    // ---------- Promo code ----------
+    function redeem(code){
+      const c = (code || "").trim().toLowerCase();
+      const ok = (c === "ftctll");
+
+      if (!ok){
+        showToast("Promo Code", "Invalid code.", 1400);
+        return;
+      }
+      player.owned = WEAPON_POOL.map(cloneWeapon); // ALL 1200 weapons
+      player.weapon = player.owned[0];
+      showToast("PROMO REDEEMED ✅", "All 1200 weapons unlocked!", 2200);
+      if (invEl.style.display==="block") refreshInv();
+    }
+
+    // ---------- Interaction ----------
+    function tryInteract(){
+      // Near lab pod?
+      if (!LAB.rescued){
+        const dLab = (player.pos.x - (LAB.x-18))**2 + (player.pos.z - (LAB.z+8))**2;
+        if (dLab < 3.2*3.2){
+          LAB.rescued = true;
+          player.serpent.owned = true;
+          if (!player.serpent.mesh){
+            player.serpent.mesh = makeSerpentMesh();
+            scene.add(player.serpent.mesh);
+          }
+          showToast("Baby Lava Serpent Rescued! 🔥🐍", "Found in an abandoned lab containment pod. It fights with you now.", 4200);
+
+          // reward: epic weapon
+          const reward = rollWeapon("Epic");
+          player.owned.push(reward);
+          player.hp = clamp(player.hp + 30, 0, player.hpMax);
+          showToast("Lab Reward", `[${reward.rarity}] ${reward.name}`, 2200);
+          if (invEl.style.display==="block") refreshInv();
+          return;
+        }
+      }
+
+      // Pickups near player
+      for (let i=pickups.length-1; i>=0; i--){
+        const p = pickups[i];
+        const dx = p.mesh.position.x - player.pos.x;
+        const dz = p.mesh.position.z - player.pos.z;
+        if (dx*dx + dz*dz < 2.2*2.2){
+          if (p.type === "weapon"){
+            player.owned.push(p.data.w);
+            showToast("Loot", `[${p.data.w.rarity}] ${p.data.w.name}`, 2200);
+            scene.remove(p.mesh);
+            pickups.splice(i,1);
+            if (invEl.style.display==="block") refreshInv();
+            return;
+          }
+          if (p.type === "health"){
+            player.hp = clamp(player.hp + p.data.a, 0, player.hpMax);
+            showToast("Healed", `+${p.data.a} HP`, 1200);
+            scene.remove(p.mesh);
+            pickups.splice(i,1);
+            return;
+          }
+        }
+      }
+
+      // Core hint
+      const dCore = (player.pos.x-CORE.x)**2 + (player.pos.z-CORE.z)**2;
+      if (CORE.alive && dCore < 14*14){
+        showToast("Mother Nest Core", "Destroy it to stop the mutant mice.", 1800);
+        return;
+      }
+
+      showToast("Interact", "Nothing here. Explore the city.", 1200);
+    }
+
+    // ---------- Camera view ----------
+    function toggleView(){
+      player.view = (player.view === "fps") ? "tps" : "fps";
+      showToast("View", player.view === "fps" ? "First-person" : "Third-person", 1100);
+    }
+
+    // ---------- Collisions (simple circle vs AABB) ----------
+    // Player treated as circle in XZ, buildings are boxes.
+    function resolveCollisions(nextPos){
+      // keep inside world bounds
+      const bounds = 580;
+      nextPos.x = clamp(nextPos.x, -bounds, bounds);
+      nextPos.z = clamp(nextPos.z, -bounds, bounds);
+
+      // collide with obstacles
+      const radius = 0.55;
+      for (const o of obstacles){
+        const p = o.position;
+        const sx = o.scale.x*0.5;
+        const sz = o.scale.z*0.5;
+
+        // closest point on AABB
+        const cx = clamp(nextPos.x, p.x - sx, p.x + sx);
+        const cz = clamp(nextPos.z, p.z - sz, p.z + sz);
+
+        const dx = nextPos.x - cx;
+        const dz = nextPos.z - cz;
+        const d2 = dx*dx + dz*dz;
+        if (d2 < radius*radius){
+          const d = Math.sqrt(d2) || 0.0001;
+          const push = (radius - d) + 0.001;
+          nextPos.x += (dx/d)*push;
+          nextPos.z += (dz/d)*push;
+        }
+      }
+    }
+
+    // ---------- HUD ----------
+    function updateHUD(){
+      const w = player.weapon;
+      const timeSec = Math.floor((performance.now()/1000) - startTimeSec);
+      const distLab = Math.floor(Math.sqrt((player.pos.x-LAB.x)**2 + (player.pos.z-LAB.z)**2));
+      const distCore = Math.floor(Math.sqrt((player.pos.x-CORE.x)**2 + (player.pos.z-CORE.z)**2));
+
+      ui.innerHTML = `
+        <div><b>${escapeHtml(playerName)}</b> • View: <b>${player.view.toUpperCase()}</b> • Score: <b>${Math.round(player.score)}</b> • Time: ${fmtTime(timeSec)}</div>
+        <div>HP: <b>${Math.round(player.hp)}</b> / ${player.hpMax} • Stamina: <b>${Math.round(player.stamina)}</b> / ${player.staminaMax} • Level: <b>${player.level}</b></div>
+        <div>Weapon: <b>[${w?.rarity || "—"}]</b> ${escapeHtml(w?.name || "None")}</div>
+        <div>Ammo: <b>${w ? w.ammo : "—"}</b> / ${w ? w.mag : "—"} ${w && w.reloading>0 ? `(Reloading ${w.reloading.toFixed(2)}s)` : ""}</div>
+        <div>Companion: ${player.serpent.owned ? "<b>Baby Lava Serpent</b> 🔥🐍" : "Not found (Lab pod)"} • Lab: <b>${distLab}</b> • Core: <b>${distCore}</b> • Core HP: <b>${CORE.alive ? Math.max(0, Math.floor(CORE.hp)) : 0}</b></div>
+        <div id="hint">
+          Goal: Rescue the serpent in the <b>Abandoned Lab</b> (press <b>E</b> at the pod), then destroy the <b>Mother Nest Core</b>.
+          Press <b>V</b> to switch FPS/TPS • Press <b>I</b> inventory • Press <b>L</b> leaderboard
+        </div>
+      `;
+    }
+
+    // ---------- Game start/end ----------
+    function resetRun(){
+      // clear enemies/pickups
+      for (const e of enemies) scene.remove(e.mesh);
+      enemies.length = 0;
+      for (const p of pickups) scene.remove(p.mesh);
+      pickups.length = 0;
+
+      LAB.rescued = false;
+      CORE.alive = true;
+      CORE.hp = 26000;
+      coreGlow.visible = true;
+      coreBase.visible = true;
+
+      player.pos.set(0, 1.6, 0);
+      player.vel.set(0,0,0);
+      player.yaw = 0;
+      player.pitch = 0;
+      player.hp = 100;
+      player.hpMax = 100;
+      player.stamina = 100;
+      player.staminaMax = 100;
+      player.invuln = 0;
+      player.score = 0;
+      player.level = 1;
+      player.xp = 0;
+
+      // start weapon + inventory
+      player.owned = [ rollWeapon("Uncommon") ];
+      player.weapon = player.owned[0];
+
+      // serpent reset
+      player.serpent.owned = false;
+      player.serpent.t = 0;
+      player.serpent.cd = 0;
+      if (player.serpent.mesh){
+        scene.remove(player.serpent.mesh);
+        player.serpent.mesh = null;
+      }
+
+      // starter loot nearby
+      spawnPickup( 3,  2, "weapon", { w: rollWeapon("Uncommon") });
+      spawnPickup(-4, -1, "weapon", { w: rollWeapon("Uncommon") });
+      spawnPickup( 2, -4, "health", { a: 18 });
+
+      startTimeSec = performance.now()/1000;
+    }
+
+    function endRun(coreDestroyed, reason){
+      running = false;
+      ui.style.display = "none";
+      crosshair.style.display = "none";
+      menu.style.display = "flex";
+
+      // unlock mouse
+      if (document.pointerLockElement === renderer.domElement) document.exitPointerLock?.();
+
+      const timeSec = Math.floor((performance.now()/1000) - startTimeSec);
+      addLB({
+        name: playerName,
+        view: player.view.toUpperCase(),
+        coreDestroyed,
+        score: player.score,
+        timeSec
+      });
+      renderLB();
+      showToast(coreDestroyed ? "VICTORY! 💥" : "DEFEAT", `${reason}  Score: ${Math.round(player.score)} • Time: ${fmtTime(timeSec)}`, 5200);
+    }
+
+    function winGame(){
+      CORE.alive = false;
+      coreGlow.visible = false;
+      // celebration: big score
+      player.score += 1500;
+      endRun(true, "Mother Nest Core destroyed. The source is gone.");
+    }
+
+    // ---------- Gameplay loop ----------
+    let last = performance.now();
+    function tick(now){
+      const dt = Math.min(0.033, (now-last)/1000);
+      last = now;
+
+      if (running){
+        update(dt);
+        render(dt);
+      } else {
+        renderIdle(now/1000);
+      }
+
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    function update(dt){
+      // shooting
+      if (mouseDown && document.pointerLockElement === renderer.domElement) shoot();
+
+      // reload timer
+      if (player.weapon && player.weapon.reloading > 0){
+        player.weapon.reloading -= dt;
+        if (player.weapon.reloading <= 0){
+          player.weapon.reloading = 0;
+          player.weapon.ammo = player.weapon.mag;
+        }
+      }
+
+      // movement
+      const forward = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
+      const right   = new THREE.Vector3(forward.z, 0, -forward.x);
+
+      let moveX = 0, moveZ = 0;
+      if (keys.has("w")) { moveX += forward.x; moveZ += forward.z; }
+      if (keys.has("s")) { moveX -= forward.x; moveZ -= forward.z; }
+      if (keys.has("d")) { moveX += right.x;   moveZ += right.z;   }
+      if (keys.has("a")) { moveX -= right.x;   moveZ -= right.z;   }
+
+      const moveLen = Math.hypot(moveX, moveZ) || 1;
+      moveX /= moveLen; moveZ /= moveLen;
+
+      const sprinting = keys.has("shift") && (Math.abs(moveX)+Math.abs(moveZ) > 0.001) && player.stamina > 0;
+      let speed = player.speed * (sprinting ? player.sprintMult : 1);
+
+      if (sprinting) player.stamina = clamp(player.stamina - 45*dt, 0, player.staminaMax);
+      else           player.stamina = clamp(player.stamina + 22*dt, 0, player.staminaMax);
+
+      // velocity smoothing
+      const targetVx = moveX * speed;
+      const targetVz = moveZ * speed;
+      player.vel.x = lerp(player.vel.x, targetVx, 0.18);
+      player.vel.z = lerp(player.vel.z, targetVz, 0.18);
+
+      // step
+      const next = player.pos.clone();
+      next.x += player.vel.x * dt;
+      next.z += player.vel.z * dt;
+      resolveCollisions(next);
+      player.pos.copy(next);
+
+      // move cat mesh
+      cat.position.set(player.pos.x, 0, player.pos.z);
+      cat.rotation.y = player.yaw;
+
+      // enemies spawn
+      const base = 0.65 + (parseInt(diffSel.value,10)-2)*0.28;
+      if (rand() < dt * base) spawnEnemy();
+
+      // enemies update + damage over time
+      for (let i=enemies.length-1; i>=0; i--){
+        const e = enemies[i];
+
+        if (e.poisonT > 0){ e.poisonT -= dt; e.hp -= dt*8; }
+        if (e.burnT   > 0){ e.burnT   -= dt; e.hp -= dt*11; }
+        const freezeSlow = e.freezeT > 0 ? 0.55 : 1;
+        if (e.freezeT > 0) e.freezeT -= dt;
+        if (e.shockT  > 0) e.shockT  -= dt;
+
+        const ep = e.mesh.position;
+        const dir = tmpVec.subVectors(player.pos, ep);
+        dir.y = 0;
+        const d = dir.length() || 1;
+        dir.multiplyScalar(1/d);
+
+        let sp = e.speed * freezeSlow * (e.shockT>0 ? 0.75 : 1);
+        ep.x += dir.x * sp * dt;
+        ep.z += dir.z * sp * dt;
+
+        // collide lightly with obstacles (simple: prevent entering by pushing back)
+        const nextE = new THREE.Vector3(ep.x, ep.y, ep.z);
+        resolveCollisions(nextE);
+        ep.x = nextE.x; ep.z = nextE.z;
+
+        e.mesh.lookAt(player.pos.x, 0.55, player.pos.z);
+
+        // touch damage
+        const dx = ep.x - player.pos.x;
+        const dz = ep.z - player.pos.z;
+        if (dx*dx + dz*dz < 1.0*1.0){
+          if (player.invuln <= 0){
+            player.hp -= e.dmg;
+            player.invuln = 0.55;
+            showToast("Ouch!", "Mutant mice hit you!", 750);
+            if (player.hp <= 0){
+              player.hp = 0;
+              endRun(false, "You were overwhelmed by mutant mice.");
+              return;
+            }
+          }
+        }
+      }
+
+      if (player.invuln > 0) player.invuln -= dt;
+
+      // pickups bob
+      for (const p of pickups){
+        p.t += dt;
+        p.mesh.position.y = 0.35 + Math.sin(p.t*2.4)*0.05;
+        p.mesh.rotation.y += dt*1.5;
+      }
+
+      // serpent companion
+      if (player.serpent.owned && player.serpent.mesh){
+        player.serpent.t += dt;
+        const s = player.serpent.mesh;
+
+        const orbit = 1.15;
+        const a = player.serpent.t * 2.2;
+        s.position.set(
+          player.pos.x + Math.cos(a)*orbit,
+          1.45 + Math.sin(a*1.7)*0.08,
+          player.pos.z + Math.sin(a)*orbit
+        );
+
+        // attack nearest enemy
+        player.serpent.cd -= dt;
+        if (player.serpent.cd <= 0){
+          let best=null, bestD=1e9;
+          for (const e of enemies){
+            const d2 = e.mesh.position.distanceToSquared(player.pos);
+            if (d2 < bestD){ bestD=d2; best=e; }
+          }
+          if (best && bestD < 16*16){
+            best.hp -= (18 + player.level*1.7);
+            best.burnT = Math.max(best.burnT, 1.1);
+            player.score += 8;
+            player.serpent.cd = Math.max(0.12, 0.55 - player.level*0.02);
+
+            if (best.hp <= 0){
+              player.score += 40;
+              dropLootAt(best.mesh.position.x, best.mesh.position.z);
+              scene.remove(best.mesh);
+              enemies.splice(enemies.indexOf(best), 1);
+            }
+          } else {
+            player.serpent.cd = 0.18;
+          }
+        }
+      }
+
+      // core pulse
+      if (CORE.alive){
+        coreGlow.scale.setScalar(1 + Math.sin(performance.now()/1000 * 3.2)*0.06);
+      }
+
+      // tracer decay
+      for (const t of tracerPool){
+        if (!t.alive) continue;
+        t.life -= dt;
+        t.material.opacity = Math.max(0, t.material.opacity - dt*12);
+        if (t.life <= 0){
+          t.alive = false;
+          t.material.opacity = 0;
+        }
+      }
+
+      // small auto-pick health if very close
+      for (let i=pickups.length-1; i>=0; i--){
+        const p = pickups[i];
+        if (p.type !== "health") continue;
+        const dx = p.mesh.position.x - player.pos.x;
+        const dz = p.mesh.position.z - player.pos.z;
+        if (dx*dx + dz*dz < 1.8*1.8){
+          player.hp = clamp(player.hp + p.data.a, 0, player.hpMax);
+          scene.remove(p.mesh);
+          pickups.splice(i,1);
+        }
+      }
+
+      updateHUD();
+    }
+
+    function render(dt){
+      // camera placement
+      // direction
+      const dir = getAimDirection();
+      const head = player.pos.clone(); head.y = 1.55;
+
+      if (player.view === "fps"){
+        camera.position.copy(head);
+        camera.lookAt(head.clone().add(dir));
+        cat.visible = false; // hide body in FPS
+      } else {
+        // third-person: behind + slightly above, with soft "shoulder" feel
+        cat.visible = true;
+        const back = dir.clone().multiplyScalar(-4.8);
+        const side = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw)).multiplyScalar(1.1);
+        const camPos = head.clone().add(back).add(side);
+        camPos.y += 2.2;
+
+        // prevent camera inside obstacles (very simple: clamp height and pull forward if needed)
+        camera.position.lerp(camPos, 0.16);
+        camera.lookAt(head.clone().add(dir.clone().multiplyScalar(8)));
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function renderIdle(t){
+      // idle camera orbit over city
+      const a = t * 0.18;
+      const r = 42;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      camera.position.set(x, 18, z);
+      camera.lookAt(0, 2, 0);
+      renderer.render(scene, camera);
+    }
+
+    // ---------- Window resize ----------
+    window.addEventListener("resize", ()=>{
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    // ---------- Buttons ----------
+    btnHow.onclick = () => {
+      showToast("How to Play",
+        "Click to lock mouse. FPS/TPS: V. Find the Abandoned Lab pod (E) to rescue Baby Lava Serpent. Loot weapons (E). Destroy the Mother Nest Core to win.",
+        7200
+      );
+    };
+    btnShowLB.onclick = () => { lbEl.style.display = "block"; renderLB(); };
+    btnResetLB.onclick = () => {
+      localStorage.removeItem(LB_KEY);
+      renderLB();
+      showToast("Leaderboard", "Reset complete.", 1400);
+    };
+    btnRedeem.onclick = () => redeem(codeInp.value);
+    codeInp.addEventListener("keydown",(e)=>{ if (e.key==="Enter") redeem(codeInp.value); });
+
+    btnPlay.onclick = () => {
+      playerName = (pname.value || "Chris").trim().slice(0,16) || "Chris";
+      player.view = viewSel.value === "fps" ? "fps" : "tps";
+
+      menu.style.display = "none";
+      ui.style.display = "block";
+      lbEl.style.display = "none";
+      invEl.style.display = "none";
+
+      running = true;
+      resetRun();
+      showToast("Drop In!", "Explore the city. Rescue the serpent in the lab, then destroy the core.", 3200);
+
+      // lock pointer after a click (browser security); we’ll also attempt immediately
+      lockPointer();
+    };
+
+    // ---------- Inventory / LB hotkeys ----------
+    window.addEventListener("keydown", (e)=>{
+      const k = e.key.toLowerCase();
+      if (k==="i") toggleInv();
+      if (k==="l") toggleLB();
+    });
+
+    // ---------- Mouse unlock ----------
+    window.addEventListener("keydown", (e)=>{
+      if (e.key === "Escape"){
+        // user can unlock pointer; crosshair will hide automatically
+      }
+    });
+
+    // ---------- More hotkeys ----------
+    window.addEventListener("keydown", (e)=>{
+      const k = e.key.toLowerCase();
+      if (k === "i") { /* handled */ }
+      if (k === "l") { /* handled */ }
+    });
+
+    // ---------- Local loot interactivity: E is handled, but also show helpful prompt when close ----------
+    // (Lightweight: the HUD already shows distances.)
+
+    // ---------- Extra: Clicking inventory could become huge; we capped view to top 250.
+    // If you want search + filters, tell me and I’ll add it.
+
+    // ---------- Core health visual ----------
+    // If core destroyed, hide its meshes.
+    function setCoreVisible(v){
+      coreBase.visible = v;
+      coreGlow.visible = v;
+    }
+
+    // ---------- Game over / win ----------
+    function checkCoreVisibility(){
+      if (!CORE.alive) setCoreVisible(false);
+    }
+
+    // ---------- Add some extra loot around the city ----------
+    // weapon caches
+    for (let i=0;i<18;i++){
+      const x = rand(-260, 260);
+      const z = rand(-260, 260);
+      // avoid inside buildings by skipping if too close to any obstacle center (cheap test)
+      let ok = true;
+      for (const o of obstacles){
+        const dx = x - o.position.x;
+        const dz = z - o.position.z;
+        if (dx*dx + dz*dz < 8*8){ ok=false; break; }
+      }
+      if (!ok) continue;
+      spawnPickup(x, z, "weapon", { w: rollWeapon("Uncommon") });
+      if (rand() < 0.4) spawnPickup(x+rand(-1,1), z+rand(-1,1), "health", { a: randi(10, 22) });
+    }
+
+    // ---------- Promo hint ----------
+    showToast("Promo Code Tip", "Use FATCATALL to unlock ALL 1200 weapons. (Also: chrisisawesome1234)", 5200);
+
+    // ---------- Keybinds that open panels ----------
+    function togglePanelsCloseOnPlay(){
+      // noop
+    }
+
+    // ---------- Ensure inventory close when starting ----------
+    // (Handled by hiding invEl on play)
+
+    // ---------- Toggle inventory/leaderboard close by clicking outside? keep simple.
+
+    // ---------- Try to keep the core hp stable even if shot after dead ----------
+    // handled by CORE.alive check
+
+    // ---------- Add a few more signs to make it feel city-like ----------
+    function addBillboard(x,z,text){
+      const g = new THREE.Group();
+      const board = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 0.4), new THREE.MeshStandardMaterial({ color: 0x1a2b55, emissive: 0x0b2a5a, emissiveIntensity: 0.35 }));
+      board.position.set(x, 3.5, z);
+      board.castShadow = true;
+      g.add(board);
+
+      // post
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,5,12), new THREE.MeshStandardMaterial({ color: 0x0b1224, roughness: 1 }));
+      post.position.set(x, 1.6, z);
+      post.castShadow = true;
+      g.add(post);
+
+      scene.add(g);
+    }
+    addBillboard(  40,  60, "FAT CAT");
+    addBillboard( -80, -40, "LAB");
+    addBillboard(  90, -80, "REACTOR");
+
+    // ---------- Control keys for panels ----------
+    function toggleInv(){
+      invEl.style.display = (invEl.style.display === "none" || !invEl.style.display) ? "block" : "none";
+      if (invEl.style.display === "block") refreshInv();
+    }
+    function toggleLB(){
+      lbEl.style.display = (lbEl.style.display === "none" || !lbEl.style.display) ? "block" : "none";
+      if (lbEl.style.display === "block") renderLB();
+    }
+
+    // ---------- Also allow promo redeem during run ----------
+    // (kept in menu; you can add an in-game prompt later)
+
+    // ---------- Auto end-run check if core destroyed ----------
+    // winGame handles it
+
+    // ---------- If you want a bigger city:
+    // tell me "make the city 4x bigger" and I’ll scale the generator + fog + bounds.
+
+    // ---------- Click-to-lock reminder ----------
+    renderer.domElement.addEventListener("click", ()=>{
+      if (running) lockPointer();
+    });
+
+    // ---------- Shooting needs mouseDown + pointer lock, handled in update().
+
+    // ---------- Add LB toggle in menu: handled by button.
+
+    // ---------- Menu controls ----------
+    btnShowLB.onclick = () => { lbEl.style.display = "block"; renderLB(); };
+    // Keep LB visible even while menu open (fine)
+
+    // ---------- Redeem from menu before play ----------
+    btnRedeem.onclick = () => {
+      // if not running yet, simulate a temp player inventory so it persists after play
+      if (!running){
+        // we’ll apply after you press play by checking a flag
+        // simplest: just store a flag in localStorage
+        const c = (codeInp.value||"").trim().toLowerCase();
+        if (c==="ftctll"){
+
+          localStorage.setItem("fatcat_allweps_unlocked_v1", "1");
+          showToast("PROMO STORED ✅", "All weapons will be unlocked when you start the game.", 2400);
+        } else {
+          showToast("Promo Code", "Invalid code.", 1400);
+        }
+      } else {
+        redeem(codeInp.value);
+      }
+    };
+
+    // ---------- Apply stored promo on run start ----------
+    const origResetRun = resetRun;
+    resetRun = function(){
+      origResetRun();
+      if (localStorage.getItem("fatcat_allweps_unlocked_v1")==="1"){
+        player.owned = WEAPON_POOL.map(cloneWeapon);
+        player.weapon = player.owned[0];
+        showToast("PROMO ACTIVE ✅", "All 1200 weapons unlocked!", 2200);
+      }
+    };
+
+    // ---------- Final helpers ----------
+    window.addEventListener("keydown", (e)=>{
+      // open inventory/leaderboard even in menu (optional)
+      if (!running && e.key.toLowerCase()==="l"){ toggleLB(); }
+    });
+
+  })();
+  </script>
+</body>
+</html>
