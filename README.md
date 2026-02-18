@@ -1,2 +1,2 @@
-# FAT-CAT-TIME-SHOOTERS
+# fat-cat-time-paws
 a time shooter game for fat cat studios.
